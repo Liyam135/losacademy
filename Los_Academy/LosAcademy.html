@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פודקאסט הנדסת רדיו ומיקרוגל - אקדמיית לוס</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; /* slate-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; /* slate-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        .podcast-item .track-number-container { display: flex; align-items: center; justify-content: center; }
+        .podcast-item:hover .track-number { display: none; }
+        .podcast-item:hover .play-icon-list { display: inline-block !important; }
+        .playing .track-number { display: none !important; }
+        .playing .play-icon-list { display: inline-block !important; }
+        .playing .play-icon-list svg { fill: #EF4444; } /* Red color for playing icon */
+        .playing .podcast-title-list { color: #EF4444; } /* Red color for playing title */
+
+        /* Colors inspired by the logo */
+        :root {
+            --logo-dark-blue: #101F3C;
+            --logo-medium-blue: #1E3A8A;
+            --logo-light-blue: #3B82F6;
+            --logo-red: #B91C1C; /* Adjusted for better visibility as accent */
+            --bg-main: #0f172a; /* slate-900 */
+            --bg-card: #1e293b; /* slate-800 */
+            --bg-player: #111827; /* gray-900 - slightly different for player */
+            --text-primary: #f1f5f9; /* slate-100 */
+            --text-secondary: #94a3b8; /* slate-400 */
+        }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+        }
+        .header-gradient {
+             background-image: linear-gradient(to bottom, var(--logo-medium-blue), var(--logo-dark-blue) 50%, var(--bg-main) 100%);
+        }
+        .accent-button {
+            background-color: var(--logo-red);
+        }
+        .accent-button:hover {
+            background-color: #dc2626; /* Tailwind red-600 */
+        }
+        .podcast-list-item {
+            background-color: transparent;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .podcast-list-item:hover {
+            background-color: rgba(255, 255, 255, 0.05); /* Subtle hover */
+        }
+        .player-active {
+            transform: translateY(0) !important;
+        }
+        /* Custom styling for range input thumb */
+        #volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px; /* Tailwind w-3 */
+            height: 12px; /* Tailwind h-3 */
+            background-color: white;
+            border-radius: 9999px; /* rounded-full */
+            cursor: pointer;
+            margin-top: -4px; /* Adjust to center thumb on track */
+        }
+        #volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border-radius: 9999px;
+            cursor: pointer;
+            border: none;
+        }
+        #volume-slider:hover::-webkit-slider-thumb {
+            background-color: var(--logo-red);
+        }
+        #volume-slider:hover::-moz-range-thumb {
+            background-color: var(--logo-red);
+        }
+
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100">
+
+    <div id="app-container" class="flex flex-col min-h-screen">
+        <div class="flex-grow overflow-y-auto pb-28"> <header id="playlist-header" class="p-4 sm:p-6 md:p-8 min-h-[300px] md:min-h-[340px] flex flex-col justify-end header-gradient relative">
+                <div class="flex flex-col sm:flex-row items-center sm:items-end gap-4 md:gap-6">
+                    <div id="featured-podcast-art-header" class="w-36 h-36 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 bg-slate-700 rounded-lg shadow-xl flex-shrink-0">
+                        </div>
+                    <div class="text-center sm:text-right mt-4 sm:mt-0">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-300">הפרק השבועי</p>
+                        <h1 id="featured-podcast-title-header" class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-1 leading-tight">
+                            </h1>
+                        <p class="text-slate-300 mt-2 text-sm">אקדמיית לוס - הנדסת רדיו ומיקרוגל</p>
+                        <p class="text-slate-400 mt-1 text-xs">
+                            <span id="playlist-owner">אקדמיית לוס</span> • 
+                            <span id="total-episodes-count"></span> פרקים
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="p-4 sm:p-6 md:p-8">
+                <div class="mb-6 flex items-center gap-4">
+                    <button id="play-all-button" aria-label="נגן את הפרק המוביל" class="accent-button hover:opacity-90 text-white rounded-full p-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-red-500 w-14 h-14 flex items-center justify-center">
+                        <svg id="main-play-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="main-pause-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <div class="min-w-full">
+                        <div class="flex items-center text-slate-400 text-sm border-b border-slate-700 pb-2 mb-2 px-2">
+                            <div class="w-8 text-center">#</div>
+                            <div class="w-16 hidden sm:block"></div> <div class="flex-grow mx-2">שם הפרק</div>
+                            <div class="w-20 text-left hidden sm:block">משך</div>
+                        </div>
+                        <div id="podcast-list-container" class="space-y-1">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer id="player" class="fixed bottom-0 left-0 right-0 bg-neutral-800 border-t border-neutral-700 p-3 text-white transform translate-y-full transition-transform duration-300 ease-in-out flex items-center justify-between h-[88px] z-50">
+            <div class="flex items-center gap-3 w-1/3">
+                <div id="player-art" class="w-12 h-12 bg-neutral-700 rounded flex-shrink-0">
+                    </div>
+                <div class="truncate">
+                    <p id="player-title" class="text-sm font-medium truncate">בחר פרק</p>
+                    <p id="player-artist" class="text-xs text-neutral-400 truncate">אקדמיית לוס</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center w-1/3 max-w-xs sm:max-w-md">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <button id="player-prev-button" aria-label="הקודם" class="text-neutral-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M16 6h2v12h-2zM8 18V6l8.5 6L8 18z"/>
+                        </svg>
+                    </button>
+                    <button id="player-play-pause" aria-label="נגן/השהה" class="bg-white text-black rounded-full p-2 w-8 h-8 flex items-center justify-center">
+                        <svg id="player-play-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        <svg id="player-pause-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="player-next-button" aria-label="הבא" class="text-neutral-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 18V6H4v12h2zm3.5-6L18 6v12l-8.5-6z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="w-full flex items-center gap-2 mt-2 px-2">
+                    <span id="current-time" class="text-xs text-neutral-400">0:00</span>
+                    <div id="progress-bar-container" class="flex-grow bg-neutral-600 rounded-full h-1 cursor-pointer group">
+                        <div id="progress-bar-fill" class="bg-white group-hover:bg-red-500 h-1 rounded-full w-0"></div>
+                    </div>
+                    <span id="total-duration" class="text-xs text-neutral-400">0:00</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3 w-1/3 justify-end">
+                 <button id="volume-button" aria-label="עוצמת שמע" class="text-neutral-400 hover:text-white">
+                    <svg id="volume-icon-high" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    <svg id="volume-icon-low" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    <svg id="volume-icon-muted" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                </button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" 
+                       class="w-16 sm:w-24 h-1 bg-neutral-500 rounded-full appearance-none cursor-pointer 
+                              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-neutral-800 focus:ring-red-500">
+            </div>
+        </footer>
+        
+        <audio id="audio-player" preload="metadata"></audio>
+    </div>
+
+    <script>
+        // *** IMPORTANT: Replace these with actual paths to your audio files ***
+        const podcastsData = [
+            { id: 1, title: "פרק 1 - מבוא ויסודות מעשיים", duration: "09:45", audioSrc: "pods/p1.wav" },
+//            { id: 2, title: "פרק 2 - מאזן רעש במערכות רדיו", duration: "18:45", audioSrc: "audio/episode2.mp3" },
+//            { id: 3, title: "פרק 3 - עיוותים לא-ליניאריים", duration: "22:10", audioSrc: "audio/episode3.mp3" },
+//           { id: 4, title: "פרק 4 - נתח תדר", duration: "19:50", audioSrc: "audio/episode4.mp3" },
+//            { id: 5, title: "פרק 5 - רכיבי תדר רדיו ומיקרוגל פסיביים", duration: "25:00", audioSrc: "audio/episode5.mp3" },
+//          { id: 6, title: "פרק 6 - מערכות מפולגות ותיאום עכבות", duration: "23:17", audioSrc: "audio/episode6.mp3" },
+//           { id: 7, title: "פרק 7 - נתח רשת וקטורי", duration: "20:05", audioSrc: "audio/episode7.mp3" },
+//           { id: 8, title: "פרק 8 - מסנני תדר רדיו ומיקרוגל", duration: "26:30", audioSrc: "audio/episode8.mp3" },
+//            { id: 9, title: "פרק 9 - ארכיטקטורות מקלט", duration: "21:55", audioSrc: "audio/episode9.mp3" },
+//            { id: 10, title: "פרק 10 - מקורות אות מחזוריים", duration: "17:40", audioSrc: "audio/episode10.mp3" },
+//            { id: 11, title: "פרק 11 - מבוא לאנטנות", duration: "24:12", audioSrc: "audio/episode11.mp3" },
+//            { id: 12, title: "פרק 12 - אפנני רדיו ספרתיים וניתוח אות וקטורי", duration: "28:00", audioSrc: "audio/episode12.mp3" },
+//            { id: 13, title: "פרק 13 - ממיר אנלוגי-לדיגיטלי", duration: "20:23", audioSrc: "audio/episode13.mp3" }
+        ];
+
+        let currentPlayingIndex = -1;
+        const audioPlayer = document.getElementById('audio-player');
+
+        // DOM Elements
+        const featuredPodcastArtHeader = document.getElementById('featured-podcast-art-header');
+        const featuredPodcastTitleHeader = document.getElementById('featured-podcast-title-header');
+        const totalEpisodesCount = document.getElementById('total-episodes-count');
+        const podcastListContainer = document.getElementById('podcast-list-container');
+        const player = document.getElementById('player');
+        const playerArt = document.getElementById('player-art');
+        const playerTitle = document.getElementById('player-title');
+        const playerPlayPauseBtn = document.getElementById('player-play-pause');
+        const playerPlayIcon = document.getElementById('player-play-icon');
+        const playerPauseIcon = document.getElementById('player-pause-icon');
+        const playerPrevButton = document.getElementById('player-prev-button');
+        const playerNextButton = document.getElementById('player-next-button');
+        const mainPlayAllButton = document.getElementById('play-all-button');
+        const mainPlayIcon = document.getElementById('main-play-icon');
+        const mainPauseIcon = document.getElementById('main-pause-icon');
+        
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const currentTimeDisplay = document.getElementById('current-time');
+        const totalDurationDisplay = document.getElementById('total-duration');
+
+        const volumeButton = document.getElementById('volume-button');
+        const volumeIconHigh = document.getElementById('volume-icon-high');
+        const volumeIconLow = document.getElementById('volume-icon-low');
+        const volumeIconMuted = document.getElementById('volume-icon-muted');
+        const volumeSlider = document.getElementById('volume-slider');
+        
+        function createPodcastArtSVG(seed, episodeNumber, isFeatured = false) {
+            const colors = ['#3B82F6', '#1E3A8A', '#EF4444', '#64748B'];
+            const bgColor = seed % 2 === 0 ? 'bg-slate-700' : 'bg-slate-600';
+            let svgContent = '';
+            const mainColor = colors[seed % colors.length];
+            const accentColor = colors[(seed + 1) % colors.length];
+            const textColor = isFeatured ? 'white' : mainColor;
+            const textSize = isFeatured ? "16" : "12";
+            svgContent = `
+                <path d="M10 50 Q 25 20, 40 50 T 70 50 T 100 50" stroke="${mainColor}" stroke-width="5" fill="none" transform="scale(0.8) translate(10,5)"/>
+                <path d="M20 65 Q 35 45, 50 65 T 80 65" stroke="${accentColor}" stroke-width="4" fill="none" transform="scale(0.8) translate(10,5)"/>
+                <text x="50" y="${isFeatured ? '85' : '90'}" font-family="Assistant, Inter, sans-serif" font-size="${textSize}" fill="${textColor}" text-anchor="middle" font-weight="bold">פרק ${episodeNumber}</text>
+            `;
+            return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="w-full h-full ${bgColor} rounded-md">${svgContent}</svg>`;
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity) {
+                return "0:00";
+            }
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${min}:${sec}`;
+        }
+
+        function updateProgressBar() {
+            const percentage = audioPlayer.duration > 0 ? (audioPlayer.currentTime / audioPlayer.duration) * 100 : 0;
+            progressBarFill.style.width = `${percentage}%`;
+            currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+        }
+        
+        const featuredPodcast = podcastsData[podcastsData.length - 1];
+        featuredPodcastArtHeader.innerHTML = createPodcastArtSVG(featuredPodcast.id, featuredPodcast.id, true);
+        featuredPodcastTitleHeader.textContent = featuredPodcast.title;
+        totalEpisodesCount.textContent = podcastsData.length;
+
+        podcastsData.forEach((podcast, index) => {
+            const div = document.createElement('div');
+            div.className = 'podcast-item podcast-list-item flex items-center p-2 pr-3 md:pr-4 rounded-md hover:bg-slate-700/50 cursor-pointer group';
+            div.dataset.index = index;
+            
+            div.innerHTML = `
+                <div class="w-8 text-slate-400 group-hover:text-white text-center track-number-container">
+                    <span class="track-number text-sm">${index + 1}</span>
+                    <button class="play-icon-list hidden group-hover:inline-block text-white focus:outline-none" aria-label="נגן את ${podcast.title}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                </div>
+                <div class="w-10 h-10 bg-slate-600 rounded mr-2 ml-3 sm:mx-3 flex-shrink-0 podcast-art-small hidden sm:block">
+                    ${createPodcastArtSVG(podcast.id, podcast.id)}
+                </div>
+                <div class="flex-grow truncate">
+                    <p class="text-white podcast-title-list truncate">${podcast.title}</p>
+                    <p class="text-xs text-slate-400 hidden md:block">אקדמיית לוס</p>
+                </div>
+                <div class="text-sm text-slate-400 pr-2 md:pr-4 w-20 text-left hidden sm:block" id="duration-item-${index}">${podcast.duration}</div>
+            `;
+            div.addEventListener('click', () => playTrack(index));
+            podcastListContainer.appendChild(div);
+        });
+
+        function updatePlayPauseIcons() {
+            const isCurrentlyPlaying = !audioPlayer.paused;
+            if (isCurrentlyPlaying) {
+                playerPlayIcon.classList.add('hidden');
+                playerPauseIcon.classList.remove('hidden');
+                mainPlayIcon.classList.add('hidden');
+                mainPauseIcon.classList.remove('hidden');
+            } else {
+                playerPlayIcon.classList.remove('hidden');
+                playerPauseIcon.classList.add('hidden');
+                mainPlayIcon.classList.remove('hidden');
+                mainPauseIcon.classList.add('hidden');
+            }
+            document.querySelectorAll('.podcast-item').forEach((item, idx) => {
+                item.classList.remove('playing');
+                const playIconInList = item.querySelector('.play-icon-list svg');
+                if (playIconInList) playIconInList.style.fill = 'currentColor'; 
+
+                if (idx === currentPlayingIndex) {
+                    item.classList.add('playing');
+                    if (isCurrentlyPlaying && playIconInList) {
+                         playIconInList.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`; 
+                         playIconInList.style.fill = 'var(--logo-red)';
+                    } else if (playIconInList) {
+                         playIconInList.innerHTML = `<path d="M8 5v14l11-7z"/>`; 
+                         if (item.classList.contains('playing')) playIconInList.style.fill = 'var(--logo-red)';
+                    }
+                } else if (playIconInList) {
+                    playIconInList.innerHTML = `<path d="M8 5v14l11-7z"/>`; 
+                }
+            });
+        }
+        
+        function playTrack(index) {
+            if (index < 0 || index >= podcastsData.length) return;
+
+            if (index === currentPlayingIndex && !audioPlayer.paused) { 
+                audioPlayer.pause();
+            } else if (index === currentPlayingIndex && audioPlayer.paused) { 
+                audioPlayer.play().catch(error => console.error("Error playing audio:", error, "Track:", podcastsData[index]));
+            } else { 
+                currentPlayingIndex = index;
+                const track = podcastsData[index];
+                audioPlayer.src = track.audioSrc; 
+                playerTitle.textContent = track.title;
+                playerArt.innerHTML = createPodcastArtSVG(track.id, track.id, false);
+                player.classList.add('player-active');
+                audioPlayer.load(); 
+                audioPlayer.play().catch(error => console.error("Error playing audio:", error, "Track:", track));
+            }
+            updatePlayPauseIcons();
+        }
+
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            totalDurationDisplay.textContent = formatTime(audioPlayer.duration);
+            const durationListItem = document.getElementById(`duration-item-${currentPlayingIndex}`);
+            if (durationListItem && podcastsData[currentPlayingIndex] && podcastsData[currentPlayingIndex].duration === "0:00") { 
+                podcastsData[currentPlayingIndex].duration = formatTime(audioPlayer.duration);
+                durationListItem.textContent = formatTime(audioPlayer.duration);
+            }
+            updateProgressBar();
+        });
+
+        audioPlayer.addEventListener('timeupdate', updateProgressBar);
+        audioPlayer.addEventListener('play', updatePlayPauseIcons);
+        audioPlayer.addEventListener('pause', updatePlayPauseIcons);
+        audioPlayer.addEventListener('ended', () => {
+            playTrack((currentPlayingIndex + 1) % podcastsData.length);
+        });
+        audioPlayer.addEventListener('error', (e) => {
+            console.error("Audio Player Error:", e);
+            playerTitle.textContent = "שגיאה בטעינת הפרק";
+            if (podcastsData[currentPlayingIndex]) {
+                 console.error("Failed to load:", podcastsData[currentPlayingIndex].audioSrc);
+            }
+        });
+
+
+        playerPlayPauseBtn.addEventListener('click', () => {
+            if (currentPlayingIndex === -1 && podcastsData.length > 0) {
+                playTrack(podcastsData.findIndex(p => p.id === featuredPodcast.id));
+            } else if (currentPlayingIndex !== -1) {
+                if (audioPlayer.paused) {
+                    audioPlayer.play().catch(error => console.error("Error playing audio:", error));
+                } else {
+                    audioPlayer.pause();
+                }
+            }
+        });
+
+        mainPlayAllButton.addEventListener('click', () => {
+            const featuredIndex = podcastsData.findIndex(p => p.id === featuredPodcast.id);
+            if (currentPlayingIndex === featuredIndex && !audioPlayer.paused) {
+                audioPlayer.pause();
+            } else {
+                playTrack(featuredIndex);
+            }
+        });
+
+        playerPrevButton.addEventListener('click', () => {
+            let prevIndex = currentPlayingIndex - 1;
+            if (prevIndex < 0) {
+                prevIndex = podcastsData.length - 1; 
+            }
+            playTrack(prevIndex);
+        });
+
+        playerNextButton.addEventListener('click', () => {
+            let nextIndex = currentPlayingIndex + 1;
+            if (nextIndex >= podcastsData.length) {
+                nextIndex = 0; 
+            }
+            playTrack(nextIndex);
+        });
+        
+        progressBarContainer.addEventListener('click', (e) => {
+            if (audioPlayer.duration > 0 && isFinite(audioPlayer.duration)) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const percentage = clickX / rect.width;
+                audioPlayer.currentTime = audioPlayer.duration * percentage;
+            }
+        });
+
+        function updateVolumeIcon() {
+            volumeIconHigh.classList.add('hidden');
+            volumeIconLow.classList.add('hidden');
+            volumeIconMuted.classList.add('hidden');
+
+            if (audioPlayer.muted || audioPlayer.volume === 0) {
+                volumeIconMuted.classList.remove('hidden');
+            } else if (audioPlayer.volume < 0.5) {
+                volumeIconLow.classList.remove('hidden');
+            } else {
+                volumeIconHigh.classList.remove('hidden');
+            }
+        }
+
+        volumeSlider.addEventListener('input', (e) => {
+            audioPlayer.volume = parseFloat(e.target.value);
+            audioPlayer.muted = audioPlayer.volume === 0;
+            updateVolumeIcon();
+        });
+
+        volumeButton.addEventListener('click', () => {
+            const currentlyMuted = audioPlayer.muted;
+            const currentVolume = audioPlayer.volume;
+
+            if (currentlyMuted) {
+                audioPlayer.muted = false;
+                if (currentVolume === 0) {
+                    audioPlayer.volume = 0.5; 
+                }
+                volumeSlider.value = audioPlayer.volume;
+            } else {
+                audioPlayer.muted = true;
+            }
+            updateVolumeIcon();
+        });
+        
+        audioPlayer.volume = parseFloat(volumeSlider.value); 
+        updateVolumeIcon();
+        updatePlayPauseIcons(); 
+
+    </script>
+</body>
+</html>
